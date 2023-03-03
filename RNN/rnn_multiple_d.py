@@ -35,10 +35,10 @@ X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 # Part 2 - Building the RNN
 
 # Importing the Keras libraries and packages
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
-from tensorflow.keras.metrics import RootMeanSquaredError
-from tensorflow.keras import backend as K
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Dropout
+from keras.metrics import RootMeanSquaredError
+from keras import backend as K
 
 def rmse(real_stock_price, predicted_stock_price):
     return K.sqrt(K.mean(K.square(predicted_stock_price - real_stock_price)))
@@ -66,34 +66,43 @@ regressor.add(Dropout(0.2))
 regressor.add(Dense(units = 1))
 
 # Compiling the RNN
-regressor.compile(optimizer = 'adam', loss = rmse, metrics =[RootMeanSquaredError()]) # for value
+regressor.compile(optimizer = 'adam', loss = rmse, metrics = [RootMeanSquaredError()]) # for value
+
+from keras.callbacks import ReduceLROnPlateau #, EarlyStopping
+
+#es = EarlyStopping(monitor='val_loss', min_delta=1e-10, patience=20, verbose=1)
+rlr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, verbose=1)
 
 # Fitting the RNN to the Training set
-regressor.fit(X_train, y_train, epochs = 125, batch_size = 64)
+regressor.fit(X_train, y_train, epochs = 125, batch_size = 64, callbacks=[rlr], validation_split=0.2)
 
 # Part 3 - Making the predictions and visualising the results
 
 # Getting the real stock price of 2017
 dataset_test = pd.read_csv('Google_Stock_Price_Test.csv')
-real_stock_price = dataset_test.iloc[:, 1:2].values
 
 # Getting the predicted stock price of 2017
 dataset_total = pd.concat((dataset_train['Open'], dataset_test['Open']), axis = 0)
 
-inputs = dataset_total[len(dataset_total) - len(dataset_test) - n_past:].values
+inputs = dataset_total.values
 inputs = inputs.reshape(-1,1)
 inputs = sc.transform(inputs)
 
 X_test = []
+y_test = []
 
-for i in range(n_past, n_past + n_future):
-    X_test.append(inputs[i-n_past:i, 0])
+for i in range(n_past, len(training_set_scaled) - n_future + 1):
+    X_test.append(inputs[i - n_past:i, 0])
+    y_test.append(inputs[i+n_future-1:i + n_future, 0])
+    
     
 X_test = np.array(X_test)
 X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
 predicted_stock_price = regressor.predict(X_test)
 predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+
+real_stock_price = sc.inverse_transform(y_test)
 
 # Visualising the results
 plt.plot(real_stock_price, color = 'red', label = 'Real Google Stock Price')
