@@ -36,10 +36,13 @@ X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 4))
 # Part 2 - Building the RNN
 
 # Importing the Keras libraries and packages
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.metrics import RootMeanSquaredError
+from tensorflow.keras import backend as K
+
+def rmse(real_stock_price, predicted_stock_price):
+    return K.sqrt(K.mean(K.square(predicted_stock_price - real_stock_price)))
 
 # Initialising the RNN
 regressor = Sequential()
@@ -68,7 +71,8 @@ regressor.add(Dropout(0.2))
 regressor.add(Dense(units = 1))
 
 # Compiling the RNN
-regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
+#regressor.compile(optimizer = 'adam', loss = 'mean_squared_error') #for trend
+regressor.compile(optimizer = 'adam', loss = rmse, metrics =[RootMeanSquaredError()]) # for value
 
 # Fitting the RNN to the Training set
 regressor.fit(X_train, y_train, epochs = 150, batch_size = 32)
