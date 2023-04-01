@@ -124,6 +124,10 @@ class RBM():
     self.b += torch.sum((v0 - vk), 0)
     self.a += torch.sum((ph0 - phk), 0)
     
+  def predict(self, x): # x: visible nodes
+    _,h = self.sample_h(x)
+    _,v = self.sample_v(h)
+    return v
 nv = len(training_set[0])
 nh = 100
 batch_size = 100
@@ -166,5 +170,23 @@ for id_user in range(nb_users):
         _,v = rbm.sample_v(h)
         #test_loss += np.sqrt(torch.mean((vt[vt>=0] - v[vt>=0])**2)) # RMSE here
         test_loss += torch.mean(torch.abs(vt[vt>=0] - v[vt>=0])) # Average Distance here
+        s += 1.
+print('test loss: '+str(test_loss/s))
+
+test_loss = 0
+s = 0.
+for user_id in range(nb_users):
+    user_test = Variable(test_set[user_id-1]).unsqueeze(0)
+    user_train = Variable(training_set[user_id-1]).unsqueeze(0)
+    output = rbm.predict(user_test)
+    output = output.data.numpy()
+    input_output = np.vstack([user_train, user_test, output])
+    
+    if len(user_train[user_train>=0]) > 0:
+        test_loss += torch.mean(torch.abs(user_train[user_train>=0] - output[user_train>=0]))
+        s += 1.
+        
+    if len(user_test[user_test>=0]) > 0:
+        test_loss += torch.mean(torch.abs(user_test[user_test>=0] - output[user_test>=0]))
         s += 1.
 print('test loss: '+str(test_loss/s))
