@@ -1,1 +1,1 @@
-# ann
+Different NN implementations using Keras/Pytorch.
